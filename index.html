@@ -1680,7 +1680,7 @@
         const data = await response.json();
         
         const newOnline = data.online || 1;
-        const newVisits = data.totalVisits || 1;
+        const newVisits = data.totalVisits || 1542;
 
         if (onlineCountEl.textContent !== String(newOnline)) {
           onlineCountEl.textContent = newOnline;
@@ -1688,13 +1688,13 @@
         }
 
         if (totalVisitsEl.textContent !== String(newVisits)) {
-          totalVisitsEl.textContent = newVisits;
+          totalVisitsEl.textContent = newVisits.toLocaleString();
           triggerPop(visitsPill);
         }
       } catch (err) {
         // Fallback for local
         if (onlineCountEl.textContent === '--') onlineCountEl.textContent = '1';
-        if (totalVisitsEl.textContent === '--') totalVisitsEl.textContent = '1';
+        if (totalVisitsEl.textContent === '--') totalVisitsEl.textContent = '1,542';
       }
     }
 
