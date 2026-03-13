@@ -1680,7 +1680,7 @@
         const data = await response.json();
         
         const newOnline = data.online || 1;
-        const newVisits = data.totalVisits || 1542;
+        const newVisits = data.totalVisits || 0;
 
         if (onlineCountEl.textContent !== String(newOnline)) {
           onlineCountEl.textContent = newOnline;
@@ -1694,7 +1694,7 @@
       } catch (err) {
         // Fallback for local
         if (onlineCountEl.textContent === '--') onlineCountEl.textContent = '1';
-        if (totalVisitsEl.textContent === '--') totalVisitsEl.textContent = '1,542';
+        if (totalVisitsEl.textContent === '--') totalVisitsEl.textContent = '0';
       }
     }
 

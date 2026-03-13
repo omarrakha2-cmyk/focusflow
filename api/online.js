@@ -1,5 +1,5 @@
 let presence = {};
-let totalVisits = 1542; // High baseline so it "isn't low"
+let totalVisits = 0; // Reset to 0 to be "real" as requested
 let seenUsers = new Set();
 
 export default function handler(req, res) {
