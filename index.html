@@ -1067,10 +1067,6 @@
           <span class="pulse-dot"></span>
           <span id="online-count">--</span> online
         </div>
-        <div class="stat-pill" id="tasksPill">
-          <span class="stat-icon">⚡</span>
-          <span id="global-tasks-count">--</span> tasks flowed
-        </div>
       </div>
       <div class="clock-section">
         <div class="clock" id="clock">12:00:00 AM</div>
@@ -1325,8 +1321,8 @@
       saveTasks();
       renderTasks();
       
-      // Update global count
-      updateOnlineCount(true);
+      // Update online presence
+      updateOnlineCount(false);
 
       taskInput.value = '';
       dateInput.value = '';
@@ -1659,31 +1655,22 @@
     }
 
     const onlineCountEl = document.getElementById('online-count');
-    const globalTasksEl = document.getElementById('global-tasks-count');
     const onlinePill = document.getElementById('onlinePill');
-    const tasksPill = document.getElementById('tasksPill');
 
-    async function updateOnlineCount(taskAdded = false) {
+    async function updateOnlineCount() {
       try {
-        const response = await fetch(`/api/online?userId=${userId}${taskAdded ? '&taskAdded=true' : ''}`);
+        const response = await fetch(`/api/online?userId=${userId}`);
         const data = await response.json();
         
         const newOnline = data.online || Math.floor(Math.random() * 5) + 12;
-        const newGlobal = data.globalTasks || 12453;
 
         if (onlineCountEl.textContent !== String(newOnline)) {
           onlineCountEl.textContent = newOnline;
           triggerPop(onlinePill);
         }
-
-        if (globalTasksEl.textContent !== String(newGlobal)) {
-          animateValue(globalTasksEl, parseInt(globalTasksEl.textContent) || newGlobal - 1, newGlobal, 1000);
-          triggerPop(tasksPill);
-        }
       } catch (err) {
         // Fallback for local
         if (onlineCountEl.textContent === '--') onlineCountEl.textContent = '12';
-        if (globalTasksEl.textContent === '--') globalTasksEl.textContent = '12,453';
       }
     }
 
@@ -1693,23 +1680,9 @@
       el.classList.add('update-pop');
     }
 
-    function animateValue(obj, start, end, duration) {
-      let startTimestamp = null;
-      const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        const value = Math.floor(progress * (end - start) + start);
-        obj.textContent = value.toLocaleString();
-        if (progress < 1) {
-          window.requestAnimationFrame(step);
-        }
-      };
-      window.requestAnimationFrame(step);
-    }
-
     // Update every 10 seconds
     updateOnlineCount();
-    setInterval(() => updateOnlineCount(false), 10000);
+    setInterval(updateOnlineCount, 10000);
   </script>
   <a href="#" class="watermark">
     <div class="watermark-icons">
