@@ -1,61 +1,51 @@
-import { sql } from '@vercel/postgres';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   const { userId } = req.query;
   
-  // Quick safety check for database environment variables
-  if (!process.env.POSTGRES_URL) {
-    return res.status(500).json({ 
-      error: 'Postgres Environment Variables not found. Please ensure you clicked "Connect" in the Vercel Storage tab and REDEPLOY the project.',
-      online: 1,
-      totalVisits: 0
-    });
-  }
-
   if (!userId) {
     return res.status(400).json({ error: 'User ID required' });
   }
 
   try {
-    // 1. Ensure the tracking table exists
-    await sql`
-      CREATE TABLE IF NOT EXISTS site_analytics (
-        user_id TEXT PRIMARY KEY,
-        last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    // 1. Register/Update this user's heartbeat
+    // Note: Ensure you have a table 'site_analytics' with 'user_id' as PRIMARY KEY
+    const { error: upsertError } = await supabase
+      .from('site_analytics')
+      .upsert(
+        { user_id: userId, last_seen: new Date().toISOString() },
+        { onConflict: 'user_id' }
       );
-    `;
 
-    // 2. Register/Update this user's heartbeat
-    await sql`
-      INSERT INTO site_analytics (user_id, last_seen)
-      VALUES (${userId}, CURRENT_TIMESTAMP)
-      ON CONFLICT (user_id) 
-      DO UPDATE SET last_seen = CURRENT_TIMESTAMP;
-    `;
+    if (upsertError) throw upsertError;
 
-    // 3. Get TOTAL unique visits (ever)
-    const totalResult = await sql`SELECT COUNT(*) as count FROM site_analytics`;
-    const totalVisits = parseInt(totalResult.rows[0].count) || 0;
+    // 2. Get TOTAL unique visits (ever)
+    const { count: totalVisits, error: totalError } = await supabase
+      .from('site_analytics')
+      .select('*', { count: 'exact', head: true });
 
-    // 4. Get ONLINE users (active in the last 60 seconds)
-    const onlineResult = await sql`
-      SELECT COUNT(*) as count 
-      FROM site_analytics 
-      WHERE last_seen > (CURRENT_TIMESTAMP - INTERVAL '1 minute');
-    `;
-    const onlineCount = parseInt(onlineResult.rows[0].count) || 1;
+    if (totalError) throw totalError;
+
+    // 3. Get ONLINE users (active in the last 60 seconds)
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    const { count: onlineCount, error: onlineError } = await supabase
+      .from('site_analytics')
+      .select('*', { count: 'exact', head: true })
+      .gt('last_seen', oneMinuteAgo);
+
+    if (onlineError) throw onlineError;
 
     res.status(200).json({ 
-      online: onlineCount,
-      totalVisits: totalVisits
+      online: onlineCount || 1,
+      totalVisits: totalVisits || 0
     });
   } catch (error) {
-    console.error('Database Error:', error);
-    // Return a graceful response so the UI doesn't break, with dev info
-    res.status(200).json({ 
-      online: 1, 
-      totalVisits: 0,
-      debug: error.message 
-    });
+    console.error('Supabase Error:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
