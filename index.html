@@ -60,28 +60,30 @@
     }
 
     .stats-container {
-      position: absolute;
-      left: 10px;
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
       display: flex;
-      gap: 10px;
-      z-index: 10;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 100;
     }
 
     .stat-pill {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       background: var(--card-bg);
       backdrop-filter: var(--glass);
       -webkit-backdrop-filter: var(--glass);
-      padding: 6px 14px;
-      border-radius: 20px;
+      padding: 8px 16px;
+      border-radius: 22px;
       border: 1px solid var(--border);
       font-size: 13px;
       font-weight: 500;
       color: var(--text-secondary);
       box-shadow: var(--shadow);
-      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .stat-pill:hover {
@@ -1044,6 +1046,14 @@
         left: 16px;
         justify-content: center;
       }
+      
+      .stats-container {
+        bottom: 80px;
+        left: 16px;
+        right: 16px;
+        flex-direction: row;
+        justify-content: center;
+      }
     }
   </style>
 </head>
@@ -1060,18 +1070,19 @@
       <div class="apple-frame frame-5" style="background-image: url('assets/apple-5.png')"></div>
     </div>
   </div>
+  <div class="stats-container">
+    <div class="stat-pill" id="onlinePill">
+      <span class="pulse-dot"></span>
+      <span id="online-count">--</span> online
+    </div>
+    <div class="stat-pill" id="visitsPill">
+      <span class="stat-icon">👥</span>
+      <span id="total-visits-count">--</span> visits
+    </div>
+  </div>
+
   <div class="app-container">
     <div class="top-bar">
-      <div class="stats-container">
-        <div class="stat-pill" id="onlinePill">
-          <span class="pulse-dot"></span>
-          <span id="online-count">--</span> online
-        </div>
-        <div class="stat-pill" id="visitsPill">
-          <span class="stat-icon">👥</span>
-          <span id="total-visits-count">--</span> visits
-        </div>
-      </div>
       <div class="clock-section">
         <div class="clock" id="clock">12:00:00 AM</div>
         <div class="date" id="date">Friday, March 13</div>
