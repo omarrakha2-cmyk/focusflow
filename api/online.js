@@ -1,5 +1,6 @@
-
 let presence = {};
+let totalVisits = 0;
+let seenUsers = new Set();
 
 export default function handler(req, res) {
   const { userId } = req.query;
@@ -14,9 +15,14 @@ export default function handler(req, res) {
 
   if (userId) {
     presence[userId] = now;
+    if (!seenUsers.has(userId)) {
+      seenUsers.add(userId);
+      totalVisits++;
+    }
   }
 
   res.status(200).json({ 
-    online: Object.keys(presence).length
+    online: Object.keys(presence).length,
+    totalVisits: totalVisits
   });
 }

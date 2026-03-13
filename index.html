@@ -1067,6 +1067,10 @@
           <span class="pulse-dot"></span>
           <span id="online-count">--</span> online
         </div>
+        <div class="stat-pill" id="visitsPill">
+          <span class="stat-icon">👥</span>
+          <span id="total-visits-count">--</span> visits
+        </div>
       </div>
       <div class="clock-section">
         <div class="clock" id="clock">12:00:00 AM</div>
@@ -1655,22 +1659,31 @@
     }
 
     const onlineCountEl = document.getElementById('online-count');
+    const totalVisitsEl = document.getElementById('total-visits-count');
     const onlinePill = document.getElementById('onlinePill');
+    const visitsPill = document.getElementById('visitsPill');
 
     async function updateOnlineCount() {
       try {
         const response = await fetch(`/api/online?userId=${userId}`);
         const data = await response.json();
         
-        const newOnline = data.online || Math.floor(Math.random() * 5) + 12;
+        const newOnline = data.online || 1;
+        const newVisits = data.totalVisits || 1;
 
         if (onlineCountEl.textContent !== String(newOnline)) {
           onlineCountEl.textContent = newOnline;
           triggerPop(onlinePill);
         }
+
+        if (totalVisitsEl.textContent !== String(newVisits)) {
+          totalVisitsEl.textContent = newVisits;
+          triggerPop(visitsPill);
+        }
       } catch (err) {
         // Fallback for local
-        if (onlineCountEl.textContent === '--') onlineCountEl.textContent = '12';
+        if (onlineCountEl.textContent === '--') onlineCountEl.textContent = '1';
+        if (totalVisitsEl.textContent === '--') totalVisitsEl.textContent = '1';
       }
     }
 
