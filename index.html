@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusFlow - Task Manager & Pomodoro</title>
+  <style>
+    :root {
+      --bg: #fbfbfd;
+      --card-bg: rgba(255, 255, 255, 0.72);
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0071e3;
+      --accent-light: rgba(0, 113, 227, 0.1);
+      --priority-high: #ff3b30;
+      --priority-medium: #ff9500;
+      --priority-low: #34c759;
+      --dot-red: #ff5f57;
+      --dot-yellow: #febc2e;
+      --dot-green: #28c840;
+      --completed: #86868b;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+      --shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.1);
+      --glass: blur(20px) saturate(180%);
+    }
+
+    .dark {
+      --bg: #000000;
+      --card-bg: rgba(30, 30, 33, 0.72);
+      --text-primary: #f5f5f7;
+      --text-secondary: #98989d;
+      --accent: #0a84ff;
+      --accent-light: rgba(10, 132, 255, 0.15);
+      --dot-red: #ff453a;
+      --dot-yellow: #ffd60a;
+      --dot-green: #30d158;
+      --completed: #98989d;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      transition: background 0.5s ease, color 0.3s ease;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 24px;
+      position: relative;
+      padding: 0 10px;
+    }
+
+    .clock-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .clock {
+      font-size: 56px;
+      font-weight: 100;
+      letter-spacing: -4px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .date {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+    }
+
+    .dark-toggle {
+      position: absolute;
+      right: 10px;
+      background: var(--card-bg);
+      backdrop-filter: var(--glass);
+      -webkit-backdrop-filter: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .dark-toggle:hover {
+      transform: scale(1.1) rotate(15deg);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .dark-toggle svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--text-primary);
+    }
+
+    .dark .dark-toggle .moon-icon { display: none; }
+    .dark .dark-toggle .sun-icon { display: block; }
+    .dark-toggle .sun-icon { display: none; }
+
+    .main-card {
+      background: var(--card-bg);
+      backdrop-filter: var(--glass);
+      -webkit-backdrop-filter: var(--glass);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .main-card:hover {
+      box-shadow: var(--shadow-hover);
+    }
+
+    .window-chrome {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .window-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+
+    .window-dot:hover { transform: scale(1.15); }
+    .window-dot.red { background: var(--dot-red); }
+    .window-dot.yellow { background: var(--dot-yellow); }
+    .window-dot.green { background: var(--dot-green); }
+
+    .section-title {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin-bottom: 20px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .task-input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    .task-input {
+      width: 100%;
+      padding: 16px 20px;
+      border: none;
+      border-radius: 16px;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 0 0 1px var(--border);
+    }
+
+    .task-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .task-input:focus {
+      box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 4px var(--accent-light);
+    }
+
+    .add-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 28px;
+      font-weight: 300;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .add-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 8px 20px rgba(0, 113, 227, 0.35);
+    }
+
+    .add-btn:active {
+      transform: scale(0.95);
+    }
+
+    .task-options {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .priority-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      background: var(--bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 0 0 1px var(--border);
+    }
+
+    .priority-btn:hover {
+      color: var(--text-primary);
+      transform: translateY(-2px);
+    }
+
+    .priority-btn.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+    }
+
+    .priority-btn.high.active {
+      background: var(--priority-high);
+      box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+    }
+
+    .priority-btn.medium.active {
+      background: var(--priority-medium);
+      box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+    }
+
+    .priority-btn.low.active {
+      background: var(--priority-low);
+      box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+    }
+
+    .duration-input {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text-primary);
+      outline: none;
+      box-shadow: inset 0 0 0 1px var(--border);
+      cursor: pointer;
+    }
+
+    .date-input {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text-primary);
+      outline: none;
+      box-shadow: inset 0 0 0 1px var(--border);
+    }
+
+    .search-bar {
+      width: 100%;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      background: var(--bg);
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      outline: none;
+      box-shadow: inset 0 0 0 1px var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .search-bar:focus {
+      box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 4px var(--accent-light);
+    }
+
+    .filter-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .task-count {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 12px;
+    }
+
+    .filter-tab {
+      padding: 8px 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: all 0.25s ease;
+    }
+
+    .filter-tab.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .filter-tab:hover:not(.active) {
+      color: var(--text-primary);
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 320px;
+      overflow-y: auto;
+      margin-bottom: 28px;
+      padding-right: 4px;
+    }
+
+    .task-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .task-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      background: var(--bg);
+      border-radius: 16px;
+      transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      cursor: grab;
+    }
+
+    .task-item:hover {
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .task-item:active {
+      cursor: grabbing;
+    }
+
+    .task-item.dragging {
+      opacity: 0.5;
+      transform: scale(0.98);
+    }
+
+    .task-item.completed .task-text {
+      text-decoration: line-through;
+      color: var(--completed);
+    }
+
+    .task-checkbox {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+
+    .task-checkbox:hover {
+      border-color: var(--accent);
+      transform: scale(1.1);
+    }
+
+    .task-checkbox.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .task-checkbox svg {
+      width: 14px;
+      height: 14px;
+      fill: white;
+      opacity: 0;
+      transform: scale(0);
+      transition: all 0.2s ease;
+    }
+
+    .task-checkbox.checked svg {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .task-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-text {
+      font-size: 16px;
+      word-break: break-word;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .task-priority {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .task-item.priority-high .task-priority {
+      background: rgba(255, 59, 48, 0.12);
+      color: var(--priority-high);
+    }
+
+    .task-item.priority-medium .task-priority {
+      background: rgba(255, 149, 0, 0.12);
+      color: var(--priority-medium);
+    }
+
+    .task-item.priority-low .task-priority {
+      background: rgba(52, 199, 89, 0.12);
+      color: var(--priority-low);
+    }
+
+    .task-due {
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .task-duration {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .task-duration::before {
+      content: '⏱';
+      font-size: 10px;
+    }
+
+    .task-delete {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+
+    .task-item:hover .task-delete {
+      opacity: 1;
+    }
+
+    .task-delete:hover {
+      background: rgba(255, 59, 48, 0.1);
+      color: var(--priority-high);
+    }
+
+    .task-delete svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .task-enter {
+      animation: taskEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes taskEnter {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .task-leave {
+      animation: taskLeave 0.3s ease forwards;
+    }
+
+    @keyframes taskLeave {
+      to {
+        opacity: 0;
+        transform: translateX(30px) scale(0.9);
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state svg {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 28px 0;
+    }
+
+    .pomodoro-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .timer-container {
+      position: relative;
+      width: 160px;
+      height: 160px;
+    }
+
+    .timer-ring {
+      transform: rotate(-90deg);
+    }
+
+    .timer-ring-bg {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 8;
+    }
+
+    .timer-ring-progress {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 8;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .timer-display {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .timer-time {
+      font-size: 36px;
+      font-weight: 200;
+      letter-spacing: -2px;
+    }
+
+    .timer-mode {
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .timer-modes {
+      display: flex;
+      gap: 6px;
+      background: var(--bg);
+      padding: 5px;
+      border-radius: 14px;
+    }
+
+    .timer-mode-btn {
+      padding: 10px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: all 0.25s ease;
+    }
+
+    .timer-mode-btn.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+    }
+
+    .timer-mode-btn:hover:not(.active) {
+      color: var(--text-primary);
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .timer-btn {
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .timer-btn.play {
+      width: 64px;
+      height: 64px;
+      background: var(--accent);
+      color: white;
+    }
+
+    .timer-btn.play:hover {
+      transform: scale(1.12);
+      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.4);
+    }
+
+    .timer-btn.play:active {
+      transform: scale(0.95);
+    }
+
+    .timer-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .timer-btn:not(.play) {
+      background: var(--bg);
+      color: var(--text-primary);
+    }
+
+    .timer-btn:not(.play):hover {
+      transform: scale(1.1);
+    }
+
+    .session-counter {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .quote-section {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .quote-text {
+      font-size: 15px;
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      transition: opacity 0.4s ease;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 24px 16px;
+      }
+
+      .clock {
+        font-size: 42px;
+      }
+
+      .main-card {
+        padding: 24px;
+      }
+
+      .input-row {
+        flex-direction: column;
+      }
+
+      .add-btn {
+        width: 100%;
+      }
+
+      .task-options {
+        flex-direction: column;
+      }
+
+      .filter-row {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .task-count {
+        text-align: center;
+      }
+
+      .timer-container {
+        width: 140px;
+        height: 140px;
+      }
+
+      .timer-time {
+        font-size: 30px;
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Enhanced 3D Background System */
+    .bg-3d-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 50%, var(--bg) 0%, #000 100%);
+      transition: background 0.8s ease;
+    }
+
+    .light .bg-3d-container {
+      background: radial-gradient(circle at 50% 50%, var(--bg) 0%, #e0e0e6 100%);
+    }
+
+    /* Cinematic Blobs */
+    .nebula-blob {
+      position: absolute;
+      width: 60vw;
+      height: 60vw;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: -1;
+      animation: nebula-move 20s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
+    }
+
+    .blob-1 {
+      top: -10%;
+      left: -10%;
+      background: var(--accent);
+      animation-duration: 25s;
+    }
+
+    .blob-2 {
+      bottom: -10%;
+      right: -10%;
+      background: #6a00ff;
+      animation-duration: 30s;
+      animation-delay: -5s;
+    }
+
+    @keyframes nebula-move {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(15%, 10%) scale(1.1); }
+    }
+
+    .apple-video-wrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90vh;
+      height: 90vh;
+      max-width: 700px;
+      max-height: 700px;
+      perspective: 1200px;
+      animation: apple-float 6s ease-in-out infinite alternate;
+      z-index: 10;
+    }
+
+    .apple-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0;
+      filter: contrast(1.1) brightness(1.1);
+      transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s ease;
+      will-change: opacity, transform;
+    }
+
+    .apple-frame.active {
+      opacity: 0.4;
+    }
+
+    .dark .apple-frame.active {
+      opacity: 0.6;
+      filter: contrast(1.2) brightness(1.2) drop-shadow(0 0 40px rgba(10, 132, 255, 0.2));
+    }
+
+    /* Ambient shimmer */
+    .apple-video-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+      );
+      transform: skewX(-25deg);
+      animation: shimmer 8s infinite linear;
+      pointer-events: none;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      30% { left: 200%; }
+      100% { left: 200%; }
+    }
+
+    @keyframes apple-float {
+      from { transform: translate(-50%, -47%) scale(1); }
+      to { transform: translate(-50%, -53%) scale(1.05); }
+    }
+
+    /* Overlay Vignette */
+    .vignette {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.3) 100%);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .light .vignette {
+      background: radial-gradient(circle, transparent 40%, rgba(255,255,255,0.2) 100%);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-3d-container">
+    <div class="vignette"></div>
+    <div class="nebula-blob blob-1"></div>
+    <div class="nebula-blob blob-2"></div>
+    <div class="apple-video-wrap">
+      <div class="apple-frame frame-1 active" style="background-image: url('assets/apple-1.png')"></div>
+      <div class="apple-frame frame-2" style="background-image: url('assets/apple-2.png')"></div>
+      <div class="apple-frame frame-3" style="background-image: url('assets/apple-3.png')"></div>
+      <div class="apple-frame frame-4" style="background-image: url('assets/apple-4.png')"></div>
+      <div class="apple-frame frame-5" style="background-image: url('assets/apple-5.png')"></div>
+    </div>
+  </div>
+  <div class="app-container">
+    <div class="top-bar">
+      <div class="clock-section">
+        <div class="clock" id="clock">12:00:00 AM</div>
+        <div class="date" id="date">Friday, March 13</div>
+      </div>
+      <button class="dark-toggle" id="darkToggle" title="Toggle dark mode">
+        <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg>
+      </button>
+    </div>
+
+    <div class="main-card">
+      <div class="window-chrome">
+        <div class="window-dot red"></div>
+        <div class="window-dot yellow"></div>
+        <div class="window-dot green"></div>
+      </div>
+
+      <h2 class="section-title">Tasks</h2>
+
+      <div class="input-row">
+        <div class="task-input-wrapper">
+          <input type="text" class="task-input" id="taskInput" placeholder="Add a new task…" autocomplete="off">
+        </div>
+        <button class="add-btn" id="addBtn" title="Add task">+</button>
+      </div>
+
+      <div class="task-options">
+        <button class="priority-btn medium active" data-priority="medium">Medium</button>
+        <button class="priority-btn high" data-priority="high">High</button>
+        <button class="priority-btn low" data-priority="low">Low</button>
+        <input type="date" class="date-input" id="dateInput">
+        <select class="duration-input" id="durationInput">
+          <option value="">No duration</option>
+          <option value="15">15 min</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+          <option value="60">1 hour</option>
+          <option value="90">1.5 hours</option>
+          <option value="120">2 hours</option>
+          <option value="180">3 hours</option>
+        </select>
+      </div>
+
+      <input type="text" class="search-bar" id="searchBar" placeholder="Search tasks…">
+
+      <div class="filter-row">
+        <div class="task-count" id="taskCount">0 tasks remaining</div>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">All</button>
+          <button class="filter-tab" data-filter="active">Active</button>
+          <button class="filter-tab" data-filter="completed">Completed</button>
+        </div>
+      </div>
+
+      <div class="task-list" id="taskList"></div>
+
+      <div class="divider"></div>
+
+      <div class="pomodoro-section">
+        <div class="timer-container">
+          <svg class="timer-ring" width="160" height="160" viewBox="0 0 160 160">
+            <circle class="timer-ring-bg" cx="80" cy="80" r="72"></circle>
+            <circle class="timer-ring-progress" id="timerProgress" cx="80" cy="80" r="72" stroke-dasharray="452" stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="timer-display">
+            <div class="timer-time" id="timerTime">25:00</div>
+            <div class="timer-mode" id="timerMode">Focus</div>
+          </div>
+        </div>
+
+        <div class="timer-modes">
+          <button class="timer-mode-btn active" data-mode="focus">Focus</button>
+          <button class="timer-mode-btn" data-mode="short">Short Break</button>
+          <button class="timer-mode-btn" data-mode="long">Long Break</button>
+        </div>
+
+        <div class="timer-controls">
+          <button class="timer-btn" id="resetBtn" title="Reset">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          </button>
+          <button class="timer-btn play" id="playBtn" title="Play/Pause">
+            <svg class="play-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <svg class="pause-icon hidden" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          </button>
+        </div>
+
+        <div class="session-counter" id="sessionCounter">Session 1 of 4</div>
+      </div>
+
+      <div class="quote-section">
+        <p class="quote-text" id="quoteText">"The secret of getting ahead is getting started." - Mark Twain</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const quotes = [
+      '"The secret of getting ahead is getting started." - Mark Twain',
+      '"Focus on being productive instead of busy." - Tim Ferriss',
+      '"It\'s not that I\'m so smart, it\'s just that I stay with problems longer." - Albert Einstein',
+      '"The way to get started is to quit talking and begin doing." - Walt Disney',
+      '"Either you run the day or the day runs you." - Jim Rohn',
+      '"You don\'t have to be great to start, but you have to start to be great." - Zig Ziglar',
+      '"Action is the foundational key to all success." - Pablo Picasso',
+      '"The only way to do great work is to love what you do." - Steve Jobs',
+      '"Start where you are. Use what you have. Do what you can." - Arthur Ashe',
+      '"Success is not final, failure is not fatal: it is the courage to continue that counts." - Winston Churchill'
+    ];
+
+    const POMODORO_MODES = {
+      focus: { time: 25 * 60, color: '#0071e3', label: 'Focus' },
+      short: { time: 5 * 60, color: '#34c759', label: 'Short Break' },
+      long: { time: 15 * 60, color: '#af52de', label: 'Long Break' }
+    };
+
+    let tasks = JSON.parse(localStorage.getItem('focusflow_tasks')) || [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let isDark = localStorage.getItem('focusflow_darkmode') === 'true';
+    let timerInterval = null;
+    let timerSeconds = POMODORO_MODES.focus.time;
+    let timerRunning = false;
+    let currentMode = 'focus';
+    let currentSession = parseInt(localStorage.getItem('focusflow_session')) || 1;
+    let draggedItem = null;
+
+    const clock = document.getElementById('clock');
+    const dateEl = document.getElementById('date');
+    const darkToggle = document.getElementById('darkToggle');
+    const taskInput = document.getElementById('taskInput');
+    const addBtn = document.getElementById('addBtn');
+    const priorityBtns = document.querySelectorAll('.priority-btn');
+    let selectedPriority = 'medium';
+    const dateInput = document.getElementById('dateInput');
+    const durationInput = document.getElementById('durationInput');
+    const searchBar = document.getElementById('searchBar');
+    const taskList = document.getElementById('taskList');
+    const taskCount = document.getElementById('taskCount');
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const timerTime = document.getElementById('timerTime');
+    const timerModeEl = document.getElementById('timerMode');
+    const timerProgress = document.getElementById('timerProgress');
+    const timerModeBtns = document.querySelectorAll('.timer-mode-btn');
+    const playBtn = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const sessionCounter = document.getElementById('sessionCounter');
+    const quoteText = document.getElementById('quoteText');
+
+    function updateClock() {
+      const now = new Date();
+      clock.textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+      const options = { weekday: 'long', month: 'long', day: 'numeric' };
+      dateEl.textContent = now.toLocaleDateString('en-US', options);
+    }
+
+    function toggleDark() {
+      isDark = !isDark;
+      document.body.classList.toggle('dark', isDark);
+      localStorage.setItem('focusflow_darkmode', isDark);
+    }
+
+    function saveTasks() {
+      localStorage.setItem('focusflow_tasks', JSON.stringify(tasks));
+    }
+
+    function renderTasks() {
+      const filtered = tasks.filter(task => {
+        const matchesFilter = currentFilter === 'all' ||
+          (currentFilter === 'active' && !task.completed) ||
+          (currentFilter === 'completed' && task.completed);
+        const matchesSearch = task.text.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesFilter && matchesSearch;
+      });
+
+      const activeCount = tasks.filter(t => !t.completed).length;
+      taskCount.textContent = `${activeCount} task${activeCount !== 1 ? 's' : ''} remaining`;
+
+      if (filtered.length === 0) {
+        taskList.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+            <p>No tasks yet. Add one above!</p>
+          </div>
+        `;
+        return;
+      }
+
+      taskList.innerHTML = filtered.map((task) => `
+        <div class="task-item priority-${task.priority} ${task.completed ? 'completed' : ''}" data-id="${task.id}" draggable="true">
+          <div class="task-checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask(${task.id})">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <div class="task-content">
+            <div class="task-text">${escapeHtml(task.text)}</div>
+            <div class="task-meta">
+              <span class="task-priority">${task.priority}</span>
+              ${task.due ? `<span class="task-due">📅 ${formatDate(task.due)}</span>` : ''}
+              ${task.duration ? `<span class="task-duration">${formatDuration(task.duration)}</span>` : ''}
+            </div>
+          </div>
+          <button class="task-delete" onclick="deleteTask(${task.id})" title="Delete task">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `).join('');
+
+      setupDragAndDrop();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function formatDuration(minutes) {
+      if (minutes < 60) return `${minutes} min`;
+      if (minutes === 60) return '1 hour';
+      if (minutes === 90) return '1.5 hours';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      if (mins === 0) return `${hours} hours`;
+      return `${hours}.${Math.round(mins/60*10)} hours`;
+    }
+
+    function addTask() {
+      const text = taskInput.value.trim();
+      if (!text) return;
+
+      const task = {
+        id: Date.now(),
+        text: text,
+        priority: selectedPriority,
+        due: dateInput.value || null,
+        duration: durationInput.value || null,
+        completed: false,
+        createdAt: Date.now()
+      };
+
+      tasks.unshift(task);
+      saveTasks();
+      renderTasks();
+
+      taskInput.value = '';
+      dateInput.value = '';
+      durationInput.value = '';
+      setPriority('medium');
+      taskInput.focus();
+    }
+
+    function toggleTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.completed = !task.completed;
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    function deleteTask(id) {
+      const element = document.querySelector(`[data-id="${id}"]`);
+      if (element) {
+        element.classList.add('task-leave');
+        setTimeout(() => {
+          tasks = tasks.filter(t => t.id !== id);
+          saveTasks();
+          renderTasks();
+        }, 300);
+      }
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      filterTabs.forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.filter === filter);
+      });
+      renderTasks();
+    }
+
+    function setupDragAndDrop() {
+      const items = taskList.querySelectorAll('.task-item');
+      items.forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+      });
+    }
+
+    function handleDragStart(e) {
+      draggedItem = this;
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      if (this === draggedItem) return;
+
+      const fromId = parseInt(draggedItem.dataset.id);
+      const toId = parseInt(this.dataset.id);
+
+      const fromIndex = tasks.findIndex(t => t.id === fromId);
+      const toIndex = tasks.findIndex(t => t.id === toId);
+
+      const [removed] = tasks.splice(fromIndex, 1);
+      tasks.splice(toIndex, 0, removed);
+
+      saveTasks();
+      renderTasks();
+    }
+
+    function updateTimer() {
+      const minutes = Math.floor(timerSeconds / 60);
+      const seconds = timerSeconds % 60;
+      timerTime.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      const total = POMODORO_MODES[currentMode].time;
+      const circumference = 2 * Math.PI * 72;
+      const offset = circumference * (1 - timerSeconds / total);
+      timerProgress.style.strokeDashoffset = offset;
+    }
+
+    function setTimerMode(mode) {
+      currentMode = mode;
+      timerSeconds = POMODORO_MODES[mode].time;
+      timerRunning = false;
+      clearInterval(timerInterval);
+      updatePlayButton();
+
+      timerModeEl.textContent = POMODORO_MODES[mode].label;
+      timerProgress.style.stroke = POMODORO_MODES[mode].color;
+
+      timerModeBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+
+      updateTimer();
+    }
+
+    function toggleTimer() {
+      if (timerRunning) {
+        clearInterval(timerInterval);
+        timerRunning = false;
+      } else {
+        timerRunning = true;
+        timerInterval = setInterval(() => {
+          timerSeconds--;
+          updateTimer();
+
+          if (timerSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            updatePlayButton();
+            onTimerComplete();
+          }
+        }, 1000);
+      }
+      updatePlayButton();
+    }
+
+    function updatePlayButton() {
+      const playIcon = playBtn.querySelector('.play-icon');
+      const pauseIcon = playBtn.querySelector('.pause-icon');
+
+      if (timerRunning) {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+      } else {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerRunning = false;
+      timerSeconds = POMODORO_MODES[currentMode].time;
+      updatePlayButton();
+      updateTimer();
+    }
+
+    function onTimerComplete() {
+      if (Notification.permission === 'granted') {
+        new Notification('FocusFlow', {
+          body: currentMode === 'focus' ? 'Focus session complete! Time for a break.' : 'Break is over! Ready to focus?',
+        });
+      }
+
+      playNotificationSound();
+
+      if (currentMode === 'focus') {
+        currentSession++;
+        localStorage.setItem('focusflow_session', currentSession);
+        sessionCounter.textContent = `Session ${currentSession} of 4`;
+
+        setTimeout(() => {
+          setTimerMode(currentSession % 4 === 0 ? 'long' : 'short');
+        }, 1000);
+      } else {
+        setTimeout(() => {
+          setTimerMode('focus');
+        }, 1000);
+      }
+    }
+
+    function playNotificationSound() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch(e) {}
+    }
+
+    function rotateQuote() {
+      const random = Math.floor(Math.random() * quotes.length);
+      quoteText.style.opacity = 0;
+      setTimeout(() => {
+        quoteText.textContent = quotes[random];
+        quoteText.style.opacity = 1;
+      }, 300);
+    }
+
+    function setPriority(priority) {
+      selectedPriority = priority;
+      priorityBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.priority === priority);
+      });
+    }
+
+    priorityBtns.forEach(btn => {
+      btn.addEventListener('click', () => setPriority(btn.dataset.priority));
+    });
+
+    darkToggle.addEventListener('click', toggleDark);
+    addBtn.addEventListener('click', addTask);
+    taskInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTask();
+      if (e.key === 'Escape') {
+        taskInput.value = '';
+        taskInput.blur();
+      }
+    });
+
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => setFilter(tab.dataset.filter));
+    });
+
+    searchBar.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderTasks();
+    });
+
+    timerModeBtns.forEach(btn => {
+      btn.addEventListener('click', () => setTimerMode(btn.dataset.mode));
+    });
+
+    playBtn.addEventListener('click', toggleTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    if (isDark) {
+      document.body.classList.add('dark');
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    renderTasks();
+    updateTimer();
+    sessionCounter.textContent = `Session ${currentSession} of 4`;
+    rotateQuote();
+
+    setInterval(rotateQuote, 30000);
+
+    // Enhanced 3D Apple Video Logic
+    const frameElements = document.querySelectorAll('.apple-frame');
+    const wrap = document.querySelector('.apple-video-wrap');
+    let currentFrameIndex = 0;
+    let isUserInteracting = false;
+    let interactionTimeout;
+
+    function showFrame(index) {
+      frameElements.forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+        // Add subtle parallax offset to each frame
+        if (i === index) {
+          el.style.transform = 'scale(1.05) translateZ(50px)';
+        } else {
+          el.style.transform = 'scale(1) translateZ(0)';
+        }
+      });
+    }
+
+    // Auto-playing "Video" Loop (cycles through frames smoothly)
+    function autoVideoLoop() {
+      if (!isUserInteracting) {
+        currentFrameIndex = (currentFrameIndex + 1) % frameElements.length;
+        showFrame(currentFrameIndex);
+      }
+    }
+    
+    // Initial interval for the video effect
+    let videoCycle = setInterval(autoVideoLoop, 3000);
+
+    // Liquid Mouse Tracking
+    document.addEventListener('mousemove', (e) => {
+      isUserInteracting = true;
+      clearTimeout(interactionTimeout);
+      
+      const x = e.clientX / window.innerWidth;
+      const y = e.clientY / window.innerHeight;
+      
+      // Map X position to the 5 frames
+      const targetFrame = Math.min(Math.max(Math.floor(x * frameElements.length), 0), frameElements.length - 1);
+      if (currentFrameIndex !== targetFrame) {
+        currentFrameIndex = targetFrame;
+        showFrame(currentFrameIndex);
+      }
+      
+      // Dynamic Tilt & Depth
+      const tiltX = (y - 0.5) * 30;
+      const tiltY = (x - 0.5) * -30;
+      wrap.style.transform = `translate(-50%, -50%) perspective(1500px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(1.15)`;
+      
+      // Move blobs relative to mouse (parallax)
+      document.querySelector('.blob-1').style.transform = `translate(${x * 50}px, ${y * 50}px)`;
+      document.querySelector('.blob-2').style.transform = `translate(${x * -50}px, ${y * -50}px)`;
+
+      interactionTimeout = setTimeout(() => {
+        isUserInteracting = false;
+        wrap.style.transform = 'translate(-50%, -50%)';
+      }, 4000);
+    });
+
+    // Handle visibility changes to save battery/resources
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearInterval(videoCycle);
+      } else {
+        videoCycle = setInterval(autoVideoLoop, 3000);
+      }
+    });
+  </script>
+</body>
+</html>

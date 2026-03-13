@@ -1,0 +1,9 @@
+{
+  "name": "focusflow",
+  "version": "1.0.0",
+  "description": "Task Manager with Pomodoro Timer",
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve ."
+  }
+}
